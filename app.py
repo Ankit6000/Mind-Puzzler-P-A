@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from PIL import Image, ImageOps
 
 import puzzle_solver
@@ -632,6 +632,11 @@ def run_solve_job(job_id: str, labels: list[str], algorithm: str) -> None:
 @app.get("/")
 def index() -> str:
     return render_template("index.html", labels=["00"] + LABELS, algorithms=ALGORITHMS)
+
+
+@app.get("/reference/<path:filename>")
+def reference_asset(filename: str) -> Any:
+    return send_from_directory(REFERENCE_DIR, filename)
 
 
 @app.get("/api/health")

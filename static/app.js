@@ -354,13 +354,25 @@ function renderMoves(moves, moveDetails) {
   });
 }
 
+function referenceTileUrl(label) {
+  return new URL(`reference/${label}.png`, document.baseURI).href;
+}
+
 function renderStateBoard(labels) {
   const grid = document.createElement("div");
   grid.className = "board-grid";
   labels.slice(0, 16).forEach((label) => {
     const tile = document.createElement("span");
     tile.className = `board-tile ${label === "00" ? "blank" : ""}`.trim();
-    tile.textContent = label;
+    if (label !== "00") {
+      tile.classList.add("has-reference");
+      tile.style.backgroundImage = `url("${referenceTileUrl(label)}")`;
+    }
+
+    const badge = document.createElement("span");
+    badge.className = "board-tile-label";
+    badge.textContent = label;
+    tile.append(badge);
     grid.append(tile);
   });
   return grid;
