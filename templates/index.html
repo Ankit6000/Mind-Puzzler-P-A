@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#171612" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Puzzle Lens" />
+    <title>Puzzle Lens</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest', v=3) }}" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png', v=3) }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css', v=3) }}" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="kicker">camera solver</p>
+          <h1>Puzzle Lens</h1>
+        </div>
+        <div class="top-actions">
+          <button class="install-button" id="installButton" type="button" hidden>Install</button>
+          <div class="status-pill" id="statusPill">camera starting</div>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <div class="capture-panel">
+          <div class="viewfinder">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="captureCanvas" class="capture-canvas"></canvas>
+            <div class="grid-mask" aria-hidden="true">
+              <span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <button class="tool-button" id="startCamera" type="button">
+              <span class="icon">CAM</span>
+              Camera
+            </button>
+            <button class="tool-button primary" id="captureButton" type="button">
+              <span class="icon">CAP</span>
+              Capture
+            </button>
+            <button class="tool-button" id="uploadButton" type="button">
+              <span class="icon">IMG</span>
+              Upload
+            </button>
+            <input id="imageUpload" class="file-input" type="file" accept="image/*" />
+            <button class="tool-button" id="analyzeButton" type="button" disabled>
+              <span class="icon">AI</span>
+              Detect
+            </button>
+            <label class="algorithm-select">
+              <span>Algorithm</span>
+              <select id="algorithmSelect">
+                {% for algorithm in algorithms %}
+                  <option value="{{ algorithm.value }}">{{ algorithm.label }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <button class="tool-button solve" id="solveButton" type="button" disabled>
+              <span class="icon">GO</span>
+              Solve
+            </button>
+          </div>
+        </div>
+
+        <aside class="side-panel">
+          <div class="section-head">
+            <p class="kicker">detected board</p>
+            <span id="outsideValue">outside: --</span>
+          </div>
+          <div class="detected-grid" id="detectedGrid"></div>
+          <div class="validation" id="validationBox">capture a puzzle to begin</div>
+        </aside>
+      </section>
+
+      <section class="solution-panel">
+        <div class="section-head">
+          <p class="kicker">solution</p>
+          <span id="solveStats">waiting</span>
+        </div>
+        <div class="solve-progress" id="solveProgress" hidden>
+          <div class="progress-track">
+            <span id="progressFill"></span>
+          </div>
+          <span id="progressText">waiting</span>
+        </div>
+        <div class="moves" id="moves"></div>
+        <div class="steps" id="steps"></div>
+      </section>
+    </main>
+
+    <template id="cellTemplate">
+      <label class="tile-cell">
+        <span class="tile-crop"></span>
+        <select></select>
+        <span class="confidence"></span>
+      </label>
+    </template>
+
+    <script>
+      window.PUZZLE_LABELS = {{ labels | tojson }};
+      window.PUZZLE_ALGORITHMS = {{ algorithms | tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='puzzle-core.js', v=3) }}"></script>
+    <script src="{{ url_for('static', filename='app.js', v=3) }}"></script>
+  </body>
+</html>
