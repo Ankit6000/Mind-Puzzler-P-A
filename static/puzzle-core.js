@@ -761,7 +761,18 @@
       dp = next;
       paths = nextPaths;
     }
-    return { cost: dp[full - 1], assignment: paths[full - 1] };
+    let bestMask = -1;
+    let bestCost = Infinity;
+    for (let mask = 0; mask < full; mask += 1) {
+      if (Number.isFinite(dp[mask]) && dp[mask] < bestCost) {
+        bestMask = mask;
+        bestCost = dp[mask];
+      }
+    }
+    if (bestMask < 0 || !paths[bestMask]) {
+      throw new Error("Could not assign reference tiles to the detected board.");
+    }
+    return { cost: bestCost, assignment: paths[bestMask] };
   }
 
   function median(values) {
@@ -844,6 +855,9 @@
       let cursor = 0;
       labels = Array.from({ length: 16 }, (_, index) => {
         if (index === blankIndex) return "00";
+        if (cursor >= reducedAssignment.length) {
+          throw new Error("Could not assign all non-empty puzzle tiles.");
+        }
         const label = TILE_LABELS[reducedAssignment[cursor]];
         cursor += 1;
         return label;
