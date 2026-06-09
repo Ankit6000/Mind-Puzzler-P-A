@@ -5,3 +5,8 @@ venv/
 env/
 .env
 .DS_Store
+training/labels.csv
+training/photos/*
+!training/photos/.gitkeep
+training/samples/*
+!training/samples/.gitkeep

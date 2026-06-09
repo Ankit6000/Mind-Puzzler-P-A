@@ -713,6 +713,7 @@
   }
 
   let referenceCache = null;
+  let trainedModelCache = undefined;
 
   async function referenceFeatures() {
     if (referenceCache) return referenceCache;
@@ -725,10 +726,60 @@
     return refs;
   }
 
-  function bestCandidatesFromVariants(features, refs) {
+  function asFeatureVectors(entry) {
+    return {
+      gray: Float32Array.from(entry.gray || []),
+      edge: Float32Array.from(entry.edge || []),
+      hist: Float32Array.from(entry.hist || []),
+    };
+  }
+
+  async function trainedModel() {
+    if (trainedModelCache !== undefined) return trainedModelCache;
+    try {
+      const response = await fetch(assetUrl("static/trained-model.json"), { cache: "no-store" });
+      if (!response.ok) {
+        trainedModelCache = null;
+        return trainedModelCache;
+      }
+      const raw = await response.json();
+      const labels = new Map();
+      for (const [label, prototypes] of Object.entries(raw.prototypes || {})) {
+        labels.set(label, prototypes.map((prototype) => ({
+          count: Number(prototype.count || 0),
+          feature: asFeatureVectors(prototype),
+        })));
+      }
+      trainedModelCache = {
+        version: raw.version || 1,
+        labels,
+        sampleCount: Number(raw.sampleCount || 0),
+      };
+    } catch (_error) {
+      trainedModelCache = null;
+    }
+    return trainedModelCache;
+  }
+
+  function trainedCostForLabel(features, model, label) {
+    if (!model?.labels?.has(label)) return null;
+    const prototypes = model.labels.get(label);
+    if (!prototypes.length) return null;
+    let best = Infinity;
+    for (const prototype of prototypes) {
+      for (const feature of features) {
+        best = Math.min(best, featureCost(feature, prototype.feature));
+      }
+    }
+    return best;
+  }
+
+  function bestCandidatesFromVariants(features, refs, model) {
     return LABELS.map((label) => {
       const ref = refs.get(label);
-      const cost = Math.min(...features.map((feature) => featureCost(feature, ref)));
+      const referenceCost = Math.min(...features.map((feature) => featureCost(feature, ref)));
+      const trainedCost = trainedCostForLabel(features, model, label);
+      const cost = trainedCost === null ? referenceCost : Math.min(referenceCost, trainedCost * 0.86);
       return { label, cost };
     }).sort((a, b) => a.cost - b.cost);
   }
@@ -781,8 +832,23 @@
     return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
-  function detectBlankIndex(metrics, ranked, assignedCosts) {
+  function detectBlankIndex(metrics, ranked, assignedCosts, blankCosts = null) {
     const medianCost = median(assignedCosts);
+    if (blankCosts?.length) {
+      let bestBlankIndex = 0;
+      for (let index = 1; index < blankCosts.length; index += 1) {
+        if (blankCosts[index] < blankCosts[bestBlankIndex]) bestBlankIndex = index;
+      }
+      const bestBlankCost = blankCosts[bestBlankIndex];
+      if (
+        Number.isFinite(bestBlankCost) &&
+        bestBlankCost < 0.22 &&
+        assignedCosts[bestBlankIndex] - bestBlankCost > 0.025
+      ) {
+        return bestBlankIndex;
+      }
+    }
+
     const ordered = metrics.map((_, index) => index).sort((a, b) => metrics[b].blankScore - metrics[a].blankScore);
     const bestIndex = ordered[0];
     const bestMetrics = metrics[bestIndex];
@@ -822,7 +888,7 @@
 
   async function analyzeImage(dataUrl, onProgress = () => {}) {
     onProgress("loading references");
-    const refs = await referenceFeatures();
+    const [refs, model] = await Promise.all([referenceFeatures(), trainedModel()]);
     const image = await loadImage(dataUrl);
     const source = canvasFromImage(image);
     const { board, cropBox } = cropBoard(source);
@@ -831,10 +897,12 @@
     onProgress("matching tiles");
     const metrics = [];
     const ranked = [];
+    const blankCosts = [];
     for (let index = 0; index < 16; index += 1) {
       metrics.push(metricsFromCanvas(drawCellToCanvas(board, index, 0.11, 64)));
       const variants = [0.035, 0.055, 0.08].map((margin) => featuresFromCanvas(drawCellToCanvas(board, index, margin, 64)));
-      ranked.push(bestCandidatesFromVariants(variants, refs));
+      ranked.push(bestCandidatesFromVariants(variants, refs, model));
+      blankCosts.push(trainedCostForLabel(variants, model, "00") ?? Infinity);
       if (index % 4 === 3) await pause();
     }
 
@@ -846,7 +914,7 @@
 
     const assignment = solveAssignment(costRows).assignment;
     const assignedCosts = assignment.map((tile, index) => costRows[index][tile]);
-    const blankIndex = detectBlankIndex(metrics, ranked, assignedCosts);
+    const blankIndex = detectBlankIndex(metrics, ranked, assignedCosts, blankCosts);
 
     let labels;
     if (blankIndex !== null) {
@@ -882,6 +950,7 @@
         blankScore: Number(metrics[index].blankScore.toFixed(3)),
         colourCoverage: Number(metrics[index].colourCoverage.toFixed(3)),
         candidates: candidates.map((candidate) => ({ label: candidate.label, score: Number((1 - candidate.cost).toFixed(3)) })),
+        modelBlankScore: Number((Number.isFinite(blankCosts[index]) ? 1 - blankCosts[index] : 0).toFixed(3)),
       };
     });
 
@@ -894,6 +963,7 @@
       boardImage,
       cropBox,
       referenceDir: "reference",
+      trainedSamples: model?.sampleCount || 0,
     };
   }
 

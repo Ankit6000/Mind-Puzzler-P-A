@@ -1,10 +1,11 @@
-const CACHE_NAME = "puzzle-lens-pages-v2";
+const CACHE_NAME = "puzzle-lens-pages-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./static/app.css",
   "./static/app.js",
   "./static/puzzle-core.js",
+  "./static/trained-model.json",
   "./static/manifest.webmanifest",
   "./static/icons/icon-192.png",
   "./static/icons/icon-512.png",

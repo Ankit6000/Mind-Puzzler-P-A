@@ -156,3 +156,53 @@ PUZZLE_REFERENCE_DIR=reference
 After deploy, open the Render URL in Chrome or Edge and install it as a PWA. The
 camera works on deployed HTTPS URLs; local network HTTP URLs may block camera
 access in some browsers.
+
+## Train Better Detection
+
+The GitHub Pages app can use a trained browser model from
+`static/trained-model.json`. The current file is seeded from the clean reference
+tiles. To improve it, add real camera photos.
+
+1. Put puzzle photos here:
+
+```text
+training/photos/
+```
+
+2. Copy the example labels file:
+
+```powershell
+Copy-Item .\training\labels.example.csv .\training\labels.csv
+```
+
+3. For each photo, add one CSV row with the filename and the 16 visible grid
+labels, row by row. Use `00` for the empty square.
+
+```csv
+filename,cell1,cell2,cell3,cell4,cell5,cell6,cell7,cell8,cell9,cell10,cell11,cell12,cell13,cell14,cell15,cell16
+my_photo.jpg,11,12,13,14,21,00,23,24,31,22,33,34,41,32,42,43
+```
+
+4. Extract tile crops:
+
+```powershell
+python .\tools\extract_training_samples.py
+```
+
+5. Train the browser model:
+
+```powershell
+python .\tools\train_detector.py
+```
+
+6. Commit and push the updated model:
+
+```powershell
+git add static/trained-model.json
+git commit -m "Train detector with real puzzle photos"
+git push origin main
+git push origin main:gh-pages
+```
+
+Raw photos and crop samples are ignored by git; only the compact model JSON is
+published.
