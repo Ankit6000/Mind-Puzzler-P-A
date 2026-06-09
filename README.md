@@ -125,14 +125,20 @@ The deploy-ready files are:
 GitHub Pages cannot run Flask/Python, so the root `index.html` uses the
 browser-only JavaScript detector and solver from `static/puzzle-core.js`.
 
-After pushing to `Ankit6000/Mind-Puzzler-P-A`, the included GitHub Actions
-workflow publishes the static PWA. The Pages URL will be:
+After pushing to `Ankit6000/Mind-Puzzler-P-A`, publish from the `gh-pages`
+branch. The Pages URL will be:
 
 ```text
 https://ankit6000.github.io/Mind-Puzzler-P-A/
 ```
 
-In the repo settings, set Pages source to GitHub Actions if GitHub asks for it.
+In repo settings, use:
+
+```text
+Source: Deploy from a branch
+Branch: gh-pages
+Folder: / root
+```
 
 ### Render
 
