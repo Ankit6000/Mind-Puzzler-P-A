@@ -1,4 +1,4 @@
-const CACHE_NAME = "puzzle-lens-v5";
+const CACHE_NAME = "puzzle-lens-v6";
 const APP_SHELL = [
   "/",
   "/static/app.css",
